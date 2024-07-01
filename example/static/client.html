@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<body>
+<label for="jsonrpc_req">Choose a request:</label>
+<select>
+</select>
+<div>
+	<h3>Request</h3>
+	<pre id="req">request</pre>
+</div>
+<div>
+	<button id="call_ws">Call via ws</button><button id="call_http">Call via http</button>
+</div>
+<div>
+	<h3>Request</h3>
+	<pre id="resp">response</pre>
+</div>
+
+<script>
+
+function sleep(ms)
+{
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// -32700	Parse error	Invalid JSON was received by the server.
+// An error occurred on the server while parsing the JSON text.
+// -32600	Invalid Request	The JSON sent is not a valid Request object.
+// -32601	Method not found	The method does not exist / is not available.
+// -32602	Invalid params	Invalid method parameter(s).
+// -32603	Internal error	Internal JSON-RPC error.
+// -32000 to -32099	Server error	Reserved for implementation-defined server-errors.
+
+const subtract = `{"jsonrpc": "2.0", "method": "subtract", "params": [42, 23], "id": 1}`;
+
+const subtract2 = `{"jsonrpc": "2.0", "method": "subtract", "params": {"subtrahend": 23, "minuend": 42}, "id": 3}`;
+
+const notification = `{"jsonrpc": "2.0", "method": "update", "params": [1,2,3,4,5]}`;
+
+const no_method = `{"jsonrpc": "2.0", "method": "foobar", "id": "1"}`;
+
+const invalid_json = `{"jsonrpc": "2.0", "method": "foobar, "params": "bar", "baz]`;
+
+const invaild_req = `{"jsonrpc": "2.0", "method": 1, "params": "bar"}`;
+
+const invalid_json2 = `[
+  {"jsonrpc": "2.0", "method": "sum", "params": [1,2,4], "id": "1"},
+  {"jsonrpc": "2.0", "method"
+]`;
+
+const empty = `[]`;
+
+const invalid_batch = `[1]`;
+
+const invalid_batch2 = `[1,2,3]`;
+
+const batch = `[
+        {"jsonrpc": "2.0", "method": "sum", "params": [1,2,4], "id": "1"},
+        {"jsonrpc": "2.0", "method": "notify_hello", "params": [7]},
+        {"jsonrpc": "2.0", "method": "subtract", "params": [42,23], "id": "2"},
+        {"foo": "boo"},
+        {"jsonrpc": "2.0", "method": "foo.get", "params": {"name": "myself"}, "id": "5"},
+        {"jsonrpc": "2.0", "method": "get_data", "id": "9"} 
+]`;
+
+const noti_batch = ` [
+        {"jsonrpc": "2.0", "method": "notify_sum", "params": [1,2,4]},
+        {"jsonrpc": "2.0", "method": "notify_hello", "params": [7]}
+]`;
+
+// TODO: add
+const invalid_param = ``;
+const invalid_noti = ``;
+
+const requests = {
+	subtract,
+	subtract2,
+	notification,
+	no_method,
+	invalid_json,
+	invaild_req,
+	invalid_json2,
+	empty,
+	invalid_batch,
+	invalid_batch2,
+	batch,
+	noti_batch
+};
+
+(async () => {
+const ws = new WebSocket('ws://localhost:8000/api');
+try {
+
+await new Promise((resolve, reject) => {
+ws.onerror = reject;
+
+ws.onopen = () => {
+		console.log('connection open');
+		ws.onmessage = msg => {
+			console.log('message');
+			console.log(msg);
+		};
+		ws.onclose = console.log;
+		resolve();
+};
+
+});
+
+}
+catch (e) {
+	console.error(e);
+}
+ws.onerror = console.error;
+
+const sel = document.querySelector('select');
+Object.keys(requests).forEach((req, i) => {
+	const opt = document.createElement('option');
+	//opt.value = requests[req];
+	opt.value = req;
+	opt.text = req;
+	if (!i) {
+		opt.slected = true;
+	}
+	sel.add(opt)
+	console.log(`${req} is added`);
+});
+
+const req_win = document.querySelector('#req');
+const resp_win = document.querySelector('#resp');
+
+req_win.textContent = requests[sel.value];
+
+sel.addEventListener('change', function() {
+	req_win.textContent = requests[this.options[this.selectedIndex].value];
+	resp_win.textContent = '';
+});
+
+ws.onmessage = msg => {
+	const resp = JSON.parse(msg.data);
+	resp_win.textContent = JSON.stringify(resp, null, 4);
+}
+
+const call_ws_btn = document.querySelector('#call_ws');
+call_ws_btn.onclick = ev => {
+	ws.send(req_win.textContent);
+};
+
+const call_http_btn = document.querySelector('#call_http');
+call_http_btn.onclick = async (ev) => {
+	const resp = await fetch('http://localhost:8000/api', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json; charset=utf-8'
+		},
+		body: req_win.textContent
+	});
+
+	resp_win.textContent = JSON.stringify(await resp.json(), null, 4);
+};
+
+})();
+
+
+</script>
+</body>
+</html>

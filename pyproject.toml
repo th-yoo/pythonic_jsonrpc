@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "pythonic_jsonrpc"
+version = "0.1.0"
+description = "Transport-independent Python JSON-RPC 2.0 implementation"
+authors = ["Your Name <you@example.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "pythonic_jsonrpc"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pydantic = "^2.7.4"
+
+
+
+[tool.poetry.dev-dependencies]
+fastapi = "^0.111.0"
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
